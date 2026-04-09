@@ -1,21 +1,20 @@
-from cats.views import AchievementViewSet, CatViewSet
+from django.contrib import admin
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib import admin
-from django.urls import include, path
-from rest_framework import routers
+from django.shortcuts import redirect
 
-router = routers.DefaultRouter()
-router.register(r'cats', CatViewSet)
-router.register(r'achievements', AchievementViewSet)
+def redirect_to_projects(request):
+    """Redirect root URL to project list."""
+    return redirect('projects:list')
 
 urlpatterns = [
+    path('', redirect_to_projects),
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
-    path('api/', include('djoser.urls')),  # Работа с пользователями
-    path('api/', include('djoser.urls.authtoken')),  # Работа с токенами
+    path('users/', include('users.urls')),
+    path('projects/', include('projects.urls')),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL,
-                          document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Users - TeamFinder{% endblock %}
+
+{% block content %}
+<div class="users-page">
+    <h1>All Users</h1>
+    
+    {% if user.is_authenticated %}
+    <div class="filter-panel">
+        <h3>Filter by:</h3>
+        <div class="filter-buttons">
+            <a href="?filter=favorites_authors" class="btn btn-secondary {% if active_filter == 'favorites_authors' %}active{% endif %}">
+                Authors of favorited projects
+            </a>
+            <a href="?filter=my_projects_participants" class="btn btn-secondary {% if active_filter == 'my_projects_participants' %}active{% endif %}">
+                Participants of my projects
+            </a>
+            <a href="?filter=likes_my_projects" class="btn btn-secondary {% if active_filter == 'likes_my_projects' %}active{% endif %}">
+                Users who like my projects
+            </a>
+            <a href="?filter=my_project_members" class="btn btn-secondary {% if active_filter == 'my_project_members' %}active{% endif %}">
+                Members of my projects
+            </a>
+            {% if active_filter %}
+            <a href="?filter=" class="btn btn-secondary">Clear Filter</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="users-grid">
+        {% for participant in participants %}
+        <div class="user-card">
+            <div class="user-avatar">
+                {% if participant.avatar %}
+                    <img src="{{ participant.avatar.url }}" alt="{{ participant.surname }} {{ participant.name }}">
+                {% else %}
+                    <div class="avatar-placeholder">{{ participant.name|first|upper }}</div>
+                {% endif %}
+            </div>
+            <div class="user-info">
+                <a href="{% url 'users:detail' participant.id %}" class="user-name">
+                    {{ participant.surname }} {{ participant.name }}
+                </a>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="viewContacts({{ participant.id }})">
+                View Contacts
+            </button>
+        </div>
+        {% empty %}
+        <p>No users found.</p>
+        {% endfor %}
+    </div>
+    
+    {% if is_paginated %}
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if active_filter %}&filter={{ active_filter }}{% endif %}">&laquo; First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if active_filter %}&filter={{ active_filter }}{% endif %}">Previous</a>
+            {% endif %}
+            
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if active_filter %}&filter={{ active_filter }}{% endif %}">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if active_filter %}&filter={{ active_filter }}{% endif %}">Last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

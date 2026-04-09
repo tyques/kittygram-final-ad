@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects - TeamFinder{% endblock %}
+
+{% block content %}
+<div class="projects-page">
+    <div class="projects-header">
+        <h1>All Projects</h1>
+        {% if user.is_authenticated %}
+        <a href="{% url 'projects:create' %}" class="btn btn-primary">Create Project</a>
+        {% endif %}
+    </div>
+    
+    <div class="projects-grid">
+        {% for project in projects %}
+        <div class="project-card">
+            <div class="project-header">
+                <a href="{% url 'users:detail' project.owner.id %}" class="project-author">
+                    {% if project.owner.avatar %}
+                        <img src="{{ project.owner.avatar.url }}" alt="{{ project.owner.surname }} {{ project.owner.name }}" class="author-avatar">
+                    {% else %}
+                        <div class="avatar-placeholder">{{ project.owner.name|first|upper }}</div>
+                    {% endif %}
+                    <span>{{ project.owner.surname }} {{ project.owner.name }}</span>
+                </a>
+                
+                {% if user.is_authenticated %}
+                <button class="btn btn-icon favorite-btn" 
+                        onclick="toggleFavorite({{ project.id }})"
+                        data-favorited="{% if user in project.interested_users.all %}true{% else %}false{% endif %}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="{% if user in project.interested_users.all %}currentColor{% else %}none{% endif %}" stroke="currentColor">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                {% endif %}
+            </div>
+            
+            <a href="{% url 'projects:detail' project.id %}" class="project-title">
+                <h3>{{ project.name }}</h3>
+            </a>
+            
+            <p class="project-description">{{ project.description|truncatewords:20 }}</p>
+            
+            <p class="project-date">{{ project.created_at|date:"M d, Y" }}</p>
+            
+            <span class="project-status status-{{ project.status }}">{{ project.get_status_display }}</span>
+        </div>
+        {% empty %}
+        <p>No projects yet. Be the first to create one!</p>
+        {% endfor %}
+    </div>
+    
+    {% if is_paginated %}
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1">&laquo; First</a>
+                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+            </span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleFavorite(projectId) {
+    fetch(`/projects/${projectId}/toggle-favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            location.reload();
+        } else if (data.status === 'error' && data.message === 'Authentication credentials were not provided.') {
+            window.location.href = '/users/login/';
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

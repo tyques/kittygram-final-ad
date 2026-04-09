@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ user.surname }} {{ user.name }} - TeamFinder{% endblock %}
+
+{% block content %}
+<div class="user-profile">
+    <div class="profile-header">
+        <div class="profile-avatar">
+            {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" alt="{{ user.surname }} {{ user.name }}">
+            {% else %}
+                <div class="avatar-placeholder">{{ user.name|first|upper }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="profile-info">
+            <h1>{{ user.surname }} {{ user.name }}</h1>
+            {% if user.about %}
+                <p class="about">{{ user.about }}</p>
+            {% endif %}
+        </div>
+        
+        {% if user == request.user %}
+            <div class="profile-actions">
+                <a href="{% url 'users:edit' user.id %}" class="btn btn-secondary">Edit Profile</a>
+                <button class="btn btn-icon" onclick="shareProfile({{ user.id }})" title="Share">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                </button>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="profile-details">
+        <div class="detail-section">
+            <h2>Contact Information</h2>
+            <ul class="contact-list">
+                <li><strong>Email:</strong> {{ user.email }}</li>
+                <li><strong>Phone:</strong> {{ user.phone }}</li>
+                {% if user.github_url %}
+                    <li><strong>GitHub:</strong> <a href="{{ user.github_url }}" target="_blank">{{ user.github_url }}</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        
+        <div class="detail-section">
+            <h2>Projects</h2>
+            {% if user.owned_projects.all %}
+                <div class="projects-grid">
+                    {% for project in user.owned_projects.all %}
+                        <div class="project-card">
+                            <a href="{% url 'projects:detail' project.id %}">
+                                <h3>{{ project.name }}</h3>
+                            </a>
+                            <p class="project-status status-{{ project.status }}">{{ project.get_status_display }}</p>
+                            <p class="project-date">{{ project.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No projects yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function shareProfile(userId) {
+    fetch(`/users/${userId}/share/`)
+        .then(response => response.json())
+        .then(data => {
+            navigator.clipboard.writeText(data.profile_url).then(() => {
+                alert('Profile link copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy this link:', data.profile_url);
+            });
+        });
+}
+</script>
+{% endblock %}

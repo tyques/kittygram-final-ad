@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - TeamFinder{% endblock %}
+
+{% block content %}
+<div class="project-detail">
+    <div class="project-header">
+        <div>
+            <h1>{{ project.name }}</h1>
+            <span class="project-status status-{{ project.status }}">{{ project.get_status_display }}</span>
+        </div>
+        
+        <div class="project-actions">
+            {% if user == project.owner or user.is_staff %}
+                <a href="{% url 'projects:edit' project.id %}" class="btn btn-secondary">Edit Project</a>
+                {% if project.status == 'open' %}
+                <button class="btn btn-danger" onclick="completeProject({{ project.id }})">Complete Project</button>
+                {% endif %}
+            {% elif user.is_authenticated %}
+                <button class="btn btn-primary" onclick="toggleParticipate({{ project.id }})">
+                    {% if user in project.participants.all %}Leave Project{% else %}Join Project{% endif %}
+                </button>
+            {% endif %}
+            
+            <button class="btn btn-icon" onclick="shareProject({{ project.id }})" title="Share">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16 6 12 2 8 6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+            </button>
+            
+            {% if user.is_authenticated %}
+            <button class="btn btn-icon favorite-btn" onclick="toggleFavorite({{ project.id }})" title="Add to Favorites">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="{% if user in project.interested_users.all %}currentColor{% else %}none{% endif %}" stroke="currentColor">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="project-meta">
+        <div class="project-author">
+            <strong>Author:</strong>
+            <a href="{% url 'users:detail' project.owner.id %}">
+                {{ project.owner.surname }} {{ project.owner.name }}
+            </a>
+        </div>
+        <div class="project-date">
+            <strong>Published:</strong> {{ project.created_at|date:"M d, Y" }}
+        </div>
+        {% if project.github_url %}
+        <div class="project-github">
+            <strong>GitHub:</strong> <a href="{{ project.github_url }}" target="_blank">{{ project.github_url }}</a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="project-description">
+        <h2>Description</h2>
+        <p>{{ project.description|linebreaks }}</p>
+    </div>
+    
+    {% if user == project.owner or user.is_staff %}
+    <div class="project-participants">
+        <h2>Participants</h2>
+        {% if project.participants.all %}
+        <div class="participants-grid">
+            {% for participant in project.participants.all %}
+            <a href="{% url 'users:detail' participant.id %}" class="participant-card">
+                {% if participant.avatar %}
+                    <img src="{{ participant.avatar.url }}" alt="{{ participant.surname }} {{ participant.name }}">
+                {% else %}
+                    <div class="avatar-placeholder">{{ participant.name|first|upper }}</div>
+                {% endif %}
+                <span>{{ participant.surname }} {{ participant.name }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No participants yet.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleParticipate(projectId) {
+    fetch(`/projects/${projectId}/toggle-participate/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            location.reload();
+        }
+    });
+}
+
+function completeProject(projectId) {
+    if (confirm('Are you sure you want to complete this project?')) {
+        fetch(`/projects/${projectId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                location.reload();
+            }
+        });
+    }
+}
+
+function toggleFavorite(projectId) {
+    fetch(`/projects/${projectId}/toggle-favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            location.reload();
+        }
+    });
+}
+
+function shareProject(projectId) {
+    fetch(`/projects/${projectId}/share/`)
+        .then(response => response.json())
+        .then(data => {
+            navigator.clipboard.writeText(data.project_url).then(() => {
+                alert('Project link copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy this link:', data.project_url);
+            });
+        });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
