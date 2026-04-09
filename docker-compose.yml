@@ -3,21 +3,36 @@ version: '3'
 volumes:
   pg_data:
   static:
+  media:
 
 services:
   db:
     image: postgres:13
     volumes:
       - pg_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=teamfinder
+      - POSTGRES_USER=teamfinder_user
+      - POSTGRES_PASSWORD=teamfinder_password
+
   backend:
     build: ./backend/
     env_file: .env
+    volumes:
+      - static:/app/staticfiles
+      - media:/app/media
+    depends_on:
+      - db
+
   frontend:
     env_file: .env
     build: ./frontend/
     command: cp -r /app/build/. /static/
     volumes:
       - static:/static
+    depends_on:
+      - backend
+
   gateway:
     build: ./nginx/
     env_file: .env
@@ -25,3 +40,7 @@ services:
       - 9000:80
     volumes:
       - static:/static
+      - media:/media
+    depends_on:
+      - backend
+      - frontend
